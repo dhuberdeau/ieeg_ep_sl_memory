@@ -1,15 +1,14 @@
-function  oddball_task(varargin)
+function  ep_sl_task(varargin)
 Screen('Preference', 'SkipSyncTests', 1);
-% kq = zeros(1, 256);
-% kq(81) = 1;
-% KbQueueCreate(0, kq);
-% KbQueueStart();
+Screen('Preference','VisualDebugLevel', 0);
+
+DAQ_ATTACHED = 0;
 
 addpath(genpath(pwd))
 
-sub_name_ = 'OB_P012';
+sub_name_ = 'test00';
 uniqueness_code = now*10000000000;
-sub_name = [sub_name_, num2str(uniqueness_code)];
+sub_name = [sub_name_, '_', num2str(uniqueness_code)];
 
 screen_dims = [1980, 1020];
 screen_dim1 = screen_dims(1);
@@ -17,13 +16,10 @@ screen_dim2 = screen_dims(2);
 
 %% Intialise digital IO
 interSample = .01;
-[jo, jh] = initiate_labjack;
-send_trigger_to_initiated_lj(jo, jh, 0);
-% daqDevice = daqhwinfo('nidaq');
-% daqDevName = daqDevice.InstalledBoardIds{1};
-% dio = digitalio('nidaq',daqDevName); % create digital IO object
-% addline(dio,0:7,0,'out'); % add 8 bit output to port 0
-% putvalue(dio,0); % send 0 to wipe out code
+if DAQ_ATTACHED
+    [jo, jh] = initiate_labjack;
+    send_trigger_to_initiated_lj(jo, jh, 0);
+end
 
 KbQueueCreate()
 KbQueueStart()
@@ -34,40 +30,37 @@ screenNumber=min(screens);
 o = Screen('TextSize', win, 24);
 
 %% setup images:
-face_texture_list = cell(1, 20);
-face_index = 1:20;
-face_trigger = 5:24;
-sym_texture_list = cell(1,4);
-sym_index = 1:4;
-sym_trigger = 1:4;
+im_dwell_time = .8;
+iti_time = 3.2;
 
-im_dwell_time = .3;
-iti_time = .4;
+symbol_file_names = {...
+    'afasa1.jpg', 'afasa2.jpg', 'afasa3.jpg', 'afasa4.jpg'...
+    'afasa5.jpg', 'afasa6.jpg', 'afasa7.jpg', 'afasa8.jpg'...
+    'afasa9.jpg', 'afasa10.jpg', 'afasa11.jpg', 'afasa12.jpg'...
+    '1.jpg', '2.jpg', '3.jpg', '4.jpg'...
+    '5.jpg', '6.jpg', '7.jpg', '8.jpg'...
+    '9.jpg', '10.jpg', '11.jpg', '12.jpg'};
+sym_texture_list = cell(1,length(symbol_file_names));
+for i_symb = 1:length(symbol_file_names)
+    temp_im = imread(symbol_file_names{i_symb});
+    sym_texture_list{i_symb} = Screen('MakeTexture', win, temp_im);
+end
 
-% for i_face = 1:length(face_texture_list)
-%     temp_im = imread(['WM-Faces', filesep, 'WM-Faces', filesep, ...
-%         'whiteMale', num2str(i_face), '.jpg']);
-%     face_texture_list{i_face} = Screen('MakeTexture', win, temp_im);
-% end
-% symbol_file_names = {'afasa5.jpg', 'afasa6.jpg', 'afasa7.jpg', 'afasa8.jpg'};
-% for i_symb = 1:length(sym_texture_list)
-%     temp_im = imread(symbol_file_names{i_symb});
-%     sym_texture_list{i_symb} = Screen('MakeTexture', win, temp_im);
-% end
-
-im_comm = imread('common_symbol.png');
-txt_comm = Screen('MakeTexture', win, im_comm);
-im_abrt = imread('aberant_symbol.png');
-txt_abrt = Screen('MakeTexture', win, im_abrt);
-
-quit_command = 0;
+N_TARG = 8;
+N_REPS = 5;
+sym_index = 1:length(sym_texture_list);
+sym_trigger = 1:length(sym_texture_list);
+target_index_temp = sym_index(randperm(length(sym_index)));
+target_index = target_index_temp(1:N_TARG);
+foil_index = setdiff(sym_index, target_index);
 
 %% start counter
-% putvalue(dio, 101);%beginning of experiment flag
-send_trigger_to_initiated_lj(jo, jh, 101);
-pause(.1);
-send_trigger_to_initiated_lj(jo, jh, 0);
-% putvalue(dio, 0);
+
+if DAQ_ATTACHED
+    send_trigger_to_initiated_lj(jo, jh, 255);
+    pause(.1);
+    send_trigger_to_initiated_lj(jo, jh, 0);
+end
 
 Screen('DrawText', win, 'BEGINNING...', round(screen_dim1/2), round(screen_dim2/2));
 Screen('Flip', win);
@@ -75,91 +68,50 @@ pause(.5);
 
 %% Display instructions.
 Screen('DrawText', win,...
-    'Press J if you see X-symbols, and K if you see O-symbols',...
+    'Please pay close attention to all images. Press the 0 key when you see "0"',...
     round(screen_dim1/2)-500, round(screen_dim2/2) - 100);
 Screen('DrawText', win,...
     'To begin, press the G key.',...
     round(screen_dim1/2)-175, round(screen_dim2/2));
 Screen('Flip', win);
-% Screen('DrawText', win,...
-%     'Press J if you see a face, and K if you see a symbol',...
-%     round(screen_dim1/2)-500, round(screen_dim2/2) - 100);
-% Screen('DrawText', win,...
-%     'To begin, press any key.',...
-%     round(screen_dim1/2)-175, round(screen_dim2/2));
-% Screen('Flip', win);
 
 str = GetSecs; [sec,~,~]=KbWait(0,0);
 
-% deviant_stimulus_list = [ones(1, 10), zeros(1, 40)]; 
-% deviant_stimulus_list = deviant_stimulus_list(randperm(length(deviant_stimulus_list)));
+%% setup experiment:
+quit_command = 0;
 
-deviant_stimulus_list = nan(16, 10);
-blocks_with_double_ = [ones(1, ceil(size(deviant_stimulus_list,1)/2)), ...
-    zeros(1, floor(size(deviant_stimulus_list,1)/2))];
-blocks_with_double = blocks_with_double_(randperm(length(blocks_with_double_)));
-block_half_seed = [1 0 0];
-for i_block = 1:size(deviant_stimulus_list,1)
-    block_first_half = [0 block_half_seed(randperm(length(block_half_seed))), 0];
-    block_second_half = [0 block_half_seed(randperm(length(block_half_seed))), 0];
-    block_zero_half = zeros(1,5);
-    if blocks_with_double(i_block) == 1
-        %this is a block with two odd-balls
-        deviant_stimulus_list(i_block, :) = [block_first_half, block_second_half];
-    else
-        %this is a block with only one odd-balls
-        deviant_stimulus_list(i_block, :) = [block_first_half, block_zero_half];
-    end
-end
-deviant_stimulus_list = reshape(deviant_stimulus_list', numel(deviant_stimulus_list), 1);
-deviant_stimulus_list = [zeros(10,1); deviant_stimulus_list]; %seed with 10 faces.
-stimulus_list = nan(1, length(deviant_stimulus_list));
-key_strokes = nan(2, length(deviant_stimulus_list));
-for i_time = 1:length(deviant_stimulus_list)
-%     pause(.5); %pause to wait for next image
-str = GetSecs;
-    while (GetSecs - str) < .5
-        [key_press, ~, key_code, ~] = KbCheck;
-        pause(.01);
-        if key_press == 1
-            key_hit = KbName(key_code);
-            if isequal(key_hit, 'd') || isequal(key_hit, 'q')
-                % quit command sent
-                quit_command = 1;
-                break
-            end
-        end
-    end
+image_sequence_ = [zeros(1, ceil(N_REPS*N_TARG*.1)), repmat(target_index, 1, N_REPS)];
+image_sequence = image_sequence_(randperm(length(image_sequence_)));
+
+%% run encoding phase of experiment:
+stimulus_list = nan(1, length(image_sequence));
+key_strokes = nan(2, length(image_sequence));
+for i_time = 1:length(image_sequence)
     
     if quit_command == 1
-            break
+        break
     end
     
-    if deviant_stimulus_list(i_time) > 0
-        %PsychPortAudio('FillBuffer', pahandle, oddball_data2);
-        this_ind = sym_index(randperm(length(sym_index)));
-%         Screen('DrawTexture', win, sym_texture_list{this_ind(1)});
-        Screen('DrawTexture', win, txt_abrt);
-        trigger_value = sym_trigger(this_ind(1));
+    this_ind = image_sequence(i_time);
+    if this_ind == 0
+        Screen('DrawText', win,...
+        '0',...
+        round(screen_dim1/2), round(screen_dim2/2));
+        trigger_value = this_ind;
     else
-        %PsychPortAudio('FillBuffer', pahandle, sound_data2);
-        this_ind = face_index(randperm(length(face_index)));
-%         Screen('DrawTexture', win, face_texture_list{this_ind(1)});
-        Screen('DrawTexture', win, txt_comm);
-        trigger_value = face_trigger(this_ind(1));
+        Screen('DrawTexture', win, sym_texture_list{this_ind});
+        trigger_value = this_ind;
     end
     stimulus_list(i_time) = trigger_value;
-    
-%     putvalue(dio, trigger_value);
-    send_trigger_to_initiated_lj(jo, jh, trigger_value);
-    %startTime = PsychPortAudio('Start', pahandle);
+
+    if DAQ_ATTACHED
+        send_trigger_to_initiated_lj(jo, jh, trigger_value);
+    end
     Screen('Flip', win);
-    send_trigger_to_initiated_lj(jo, jh, 0);
-%     putvalue(dio, 0); %flip to show image
-    
-%     pause(.3) %pause to maintain image on screen for .3s seconds:
-%     str = GetSecs;
-%     [temp_sec, temp_key] = wait_kbcheck(.3);
+    if DAQ_ATTACHED 
+        send_trigger_to_initiated_lj(jo, jh, 0);
+    end
+
     response_made = 0;
     temp_key = nan;
     str = GetSecs;
@@ -182,48 +134,120 @@ str = GetSecs;
     end
     
     if quit_command == 1
-            break
+        break
     end
     
     Screen('Flip', win);
     
     % pause between images:
-    [temp_sec2, temp_key2] = wait_kbcheck(.4);
+    [temp_sec2, temp_key2] = wait_kbcheck(iti_time);
     
     if ~isnan(temp_key)
-        key_strokes(1, i_time) = temp_key;
+        key_strokes(1, i_time) = temp_key(1);
         key_strokes(2, i_time) = temp_sec - str;
     elseif ~isnan(temp_key2)
-        key_strokes(1, i_time) = temp_key2;
+        key_strokes(1, i_time) = temp_key2(1);
         key_strokes(2, i_time) = temp_sec2 - str;
     end
-        
+
+    save([sub_name, '_temp'], 'image_sequence', 'stimulus_list', 'key_strokes');
     
-%     Screen('DrawText', win, num2str(10 - i_time), round(screen_dim1/2),round(screen_dim2/2));
-    %Screen('Flip', win);
-    save(['oddball_', sub_name, '_temp'], 'deviant_stimulus_list', 'stimulus_list', 'key_strokes');
-    
-%    [pressed, firstPress, ~, ~] = KbQueueCheck;
-%    if sum(pressed) > 0
-%        % q was pressed
-%        sca
-%    end
-%     ch_av = CharAvail;
-%     while ch_av
-%         temp_ch = GetChar;
-%         if isequal(temp_ch, 'q')
-%             sca;
-%         end
-%         ch_av = CharAvail;
-%     end
 end
 
-% putvalue(dio, 102); % end of experiment trigger
-send_trigger_to_initiated_lj(jo, jh, 102);
-pause(.1);
-send_trigger_to_initiated_lj(jo, jh, 0);
-% putvalue(dio, 0);
 
-save(['oddball_', sub_name], 'deviant_stimulus_list', 'stimulus_list', 'key_strokes');
-% save(['oddball_', sub_name, '_KB'], 'key_strokes');
+%% run recall phase of experiment:
+% switch of experiment trigger
+if DAQ_ATTACHED
+    send_trigger_to_initiated_lj(jo, jh, 255);
+    pause(.1);
+    send_trigger_to_initiated_lj(jo, jh, 0);
+end
+
+sym_index_rand = sym_index(randperm(length(sym_index)));
+response_YN = cell(1, length(sym_index_rand));
+response_conf = cell(1, length(sym_index_rand));
+for i_im = 1:length(sym_index)
+    % ITI
+    pause(1)
+    
+    % show image:
+    Screen('DrawTexture', win, sym_texture_list{sym_index_rand(i_im)});
+    Screen('DrawText', win,...
+        'Have you seen this symbol?',...
+        round(screen_dim1/2)-75, round(screen_dim2/2)-100);
+    
+    if DAQ_ATTACHED
+        send_trigger_to_initiated_lj(jo, jh, sym_index_rand(i_im));
+    end
+    Screen('Flip', win);
+    if DAQ_ATTACHED 
+        send_trigger_to_initiated_lj(jo, jh, 0);
+    end
+    
+    str = GetSecs;
+    key_press = 0;
+    while ~key_press
+        [key_press, key_seconds, key_code, ~] = KbCheck;
+        pause(.01);
+        if key_press == 1
+            key_hit = KbName(key_code);
+            response_YN{i_im} = key_hit;
+            if isequal(key_hit, 'q')
+                % quit command sent
+                quit_command = 1;
+                break
+            end
+        end
+    end
+    Screen('Flip', win);
+    
+    pause(.2)
+    
+    % ask for response:
+%     Screen('DrawTexture', win, sym_texture_list{sym_index_rand(i_im)});
+    Screen('DrawText', win,...
+        'How confident are you?',...
+        round(screen_dim1/2)-75, round(screen_dim2/2)- 100);
+     Screen('DrawText', win,...
+         '1 - did not see, 2 - may not have seen, 3 - may have seen, 4 - did see',...
+         round(screen_dim1/2)-175, round(screen_dim2/2));
+    
+    if DAQ_ATTACHED
+        send_trigger_to_initiated_lj(jo, jh, sym_index_rand(i_im));
+    end
+    Screen('Flip', win);
+    if DAQ_ATTACHED 
+        send_trigger_to_initiated_lj(jo, jh, 0);
+    end
+    
+    str = GetSecs;
+    key_press = 0;
+    while ~key_press
+        [key_press, key_seconds, key_code, ~] = KbCheck;
+        pause(.01);
+        if key_press == 1
+            key_hit = KbName(key_code);
+            response_conf{i_im} = key_hit;
+            if isequal(key_hit, 'q')
+                % quit command sent
+                quit_command = 1;
+                break
+            end
+        end
+    end
+    Screen('Flip', win);
+    save([sub_name, 'response_temp'], 'image_sequence', 'stimulus_list', 'key_strokes', 'response_YN', 'response_conf');
+%     pause
+end
+
+%% Shut down experiment:
+% end of experiment trigger
+if DAQ_ATTACHED
+    send_trigger_to_initiated_lj(jo, jh, 255);
+    pause(.1);
+    send_trigger_to_initiated_lj(jo, jh, 0);
+end
+
+save([sub_name, 'ep_sl'], 'image_sequence', 'stimulus_list', 'key_strokes', 'response_YN', 'response_conf', 'target_index');
+
 sca
