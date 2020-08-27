@@ -20,7 +20,7 @@ quit_command = 0;
 
 % generate sequence through Markov Chain:
 pair_p = .25;
-target_pairs = [1, 3, 5, 7; 2, 4, 6, 8];
+target_pairs = [1, 3, 5, 7, 9; 2, 4, 6, 8, 10];
 
 P = (1/(length(symbol_file_names) - 1))*ones(length(symbol_file_names));
 for i_targ = 1:size(target_pairs,2)
