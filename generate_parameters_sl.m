@@ -8,36 +8,45 @@ symbol_file_names = {...
     '5.jpg', '6.jpg', '7.jpg', '8.jpg'...
     '9.jpg', '10.jpg', '11.jpg', '12.jpg'};
 
-N_TARG = 8;
+N_TARG = 12;
 N_REPS = 5;
 sym_index = 1:length(symbol_file_names);
-target_index_temp = sym_index(randperm(length(sym_index)));
-target_index = target_index_temp(1:N_TARG);
-foil_index = setdiff(sym_index, target_index);
+target_list_temp = sym_index(randperm(length(sym_index)));
+target_list = target_list_temp(1:N_TARG);
+
+% symbol_file_names_subset = symbol_file_names(target_index);
+% target_index = 1:length(symbol_file_names_subset);
+% foil_index = setdiff(sym_index, target_index);
+target_list_index = 1:length(target_list);
 
 %% setup experiment:
-quit_command = 0;
+
+PAIR_TRANSITION_PROBABILITY = 1;
 
 % generate sequence through Markov Chain:
-pair_p = .25;
-target_pairs = [1, 3, 5, 7, 9; 2, 4, 6, 8, 10];
+pair_p = 1/(N_TARG/2);
+target_pairs = [1, 3, 5, 7, 9, 11; 2, 4, 6, 8, 10, 12];
 
-P = (1/(length(symbol_file_names) - 1))*ones(length(symbol_file_names));
+% assign transition probabilities between pairs:
+P = zeros(length(target_list));
 for i_targ = 1:size(target_pairs,2)
-    P(target_index(target_pairs(1,i_targ)), target_index(target_pairs(2,i_targ))) = .9;
-    P(target_index(target_pairs(1,i_targ)), setdiff(1:size(P,2), target_index(target_pairs(2,i_targ)))) = .1/(length(symbol_file_names)-2);
+    %assign pair transition probabilities:
+    P(target_list_index(target_pairs(1,i_targ)), target_list_index(target_pairs(2,i_targ))) = PAIR_TRANSITION_PROBABILITY;
+    
+    % assign transition probabilities to non-pairs:
+    P(target_list_index(target_pairs(1,i_targ)), setdiff(1:size(P,2), target_list_index(target_pairs(2,i_targ)))) = (1 - PAIR_TRANSITION_PROBABILITY)/(size(P,2)-2); 
+    
+    % assign pair transitions between pairs:
+    P(target_pairs(2,i_targ), setdiff(target_pairs(1,:), target_pairs(1,i_targ))) = 1/(size(target_pairs,2) - 1);
+    P(target_pairs(2,i_targ), target_pairs(1,i_targ)) = 0; %don't transition back to first set of pair
 end
 for i_c = 1:size(P, 2)
-    for i_r = 1:size(P,1)
-        if i_r == i_c
-            P(i_r, i_c) = 0;
-        end
-    end
+    P(i_c, i_c) = 0;
 end
 
-mc = mcmix(24, 'Fix', P);
-image_sequence = simulate(mc, floor(N_REPS*N_TARG/pair_p));
+mc = mcmix(length(target_list), 'Fix', P);
+image_sequence = simulate(mc, floor(N_REPS*N_TARG));
 
 %% save
 
-save([sub_name, '_SL_params'], 'target_index', 'target_pairs', 'image_sequence');
+save([sub_name, '_SL_params'], 'target_list', 'target_pairs', 'image_sequence');
