@@ -9,7 +9,7 @@ symbol_file_names = {...
     '9.jpg', '10.jpg', '11.jpg', '12.jpg'};
 
 N_TARG = 12;
-N_REPS = 5;
+N_REPS = 10;
 sym_index = 1:length(symbol_file_names);
 target_list_temp = sym_index(randperm(length(sym_index)));
 target_list = target_list_temp(1:N_TARG);

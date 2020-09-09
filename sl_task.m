@@ -6,7 +6,12 @@ DAQ_ATTACHED = 0;
 
 addpath(genpath(pwd))
 
-sub_name_ = 'test00';
+if nargin > 0
+    sub_name_ = varargin{1};
+else
+    sub_name_ = 'test';
+end
+
 uniqueness_code = now*10000000000;
 sub_name = [sub_name_, '_', num2str(uniqueness_code)];
 
@@ -25,7 +30,7 @@ KbQueueCreate()
 KbQueueStart()
 
 %% setup images:
-im_dwell_time = .5;
+im_dwell_time = .4;
 iti_time = .8;
 
 symbol_file_names = {...
@@ -40,7 +45,7 @@ symbol_file_names = {...
 sym_index = 1:length(symbol_file_names);
 
 % load target_index, target_pairs, and image_sequence
-load('test00_SL_params.mat');
+load('DR_SL_params.mat');
 
 quit_command = 0;
 
@@ -82,76 +87,76 @@ key_strokes = nan(2, length(image_sequence));
 
 % insert catch trials (zeros, where subject has to hit 0)
 
-% 
-% for i_time = 1:length(image_sequence)
-%     
-%     if quit_command == 1
-%         break
-%     end
-%     
-%     this_ind = target_list(image_sequence(i_time));
-%     if this_ind == 0
-%         Screen('DrawText', win,...
-%         '0',...
-%         round(screen_dim1/2), round(screen_dim2/2));
-%         trigger_value = this_ind;
-%     else
-%         Screen('DrawTexture', win, sym_texture_list{this_ind});
-%         trigger_value = this_ind;
-%     end
-%     stimulus_list(i_time) = this_ind;
-% 
-%     if DAQ_ATTACHED
-%         send_trigger_to_initiated_lj(jo, jh, trigger_value);
-%     end
-%     Screen('Flip', win);
-%     if DAQ_ATTACHED 
-%         send_trigger_to_initiated_lj(jo, jh, 0);
-%     end
-% 
-%     response_made = 0;
-%     temp_key = nan;
-%     str = GetSecs;
-%     while (GetSecs - str) < im_dwell_time
-%         [key_press, key_seconds, key_code, ~] = KbCheck;
-%         pause(.01);
-%         if key_press == 1
-%             key_hit = KbName(key_code);
-%             if isequal(key_hit, 'q')
-%                 % quit command sent
-%                 quit_command = 1;
-%                 break
-%             end
-%             if response_made == 0
-%                 temp_key = key_hit;
-%                 temp_sec = key_seconds;
-%                 response_made = 1;
-%             end
-%         end
-%     end
-%     
-%     if quit_command == 1
-%         break
-%     end
-%     
-%     Screen('Flip', win);
-%     
-%     % pause between images:
-%     [temp_sec2, temp_key2] = wait_kbcheck(iti_time);
-%     
-%     if ~isnan(temp_key)
-%         key_strokes(1, i_time) = temp_key(1);
-%         key_strokes(2, i_time) = temp_sec - str;
-%     elseif ~isnan(temp_key2)
-%         key_strokes(1, i_time) = temp_key2(1);
-%         key_strokes(2, i_time) = temp_sec2 - str;
-%     end
-% 
-%     save([sub_name, '_temp'], 'image_sequence', 'stimulus_list', 'key_strokes', 'target_list');
-%     
-% end
-% 
-% save([sub_name, '_encode'], 'image_sequence', 'stimulus_list', 'key_strokes', 'target_list');
+
+for i_time = 1:length(image_sequence)
+    
+    if quit_command == 1
+        break
+    end
+    
+    this_ind = target_list(image_sequence(i_time));
+    if this_ind == 0
+        Screen('DrawText', win,...
+        '0',...
+        round(screen_dim1/2), round(screen_dim2/2));
+        trigger_value = this_ind;
+    else
+        Screen('DrawTexture', win, sym_texture_list{this_ind});
+        trigger_value = this_ind;
+    end
+    stimulus_list(i_time) = this_ind;
+
+    if DAQ_ATTACHED
+        send_trigger_to_initiated_lj(jo, jh, trigger_value);
+    end
+    Screen('Flip', win);
+    if DAQ_ATTACHED 
+        send_trigger_to_initiated_lj(jo, jh, 0);
+    end
+
+    response_made = 0;
+    temp_key = nan;
+    str = GetSecs;
+    while (GetSecs - str) < im_dwell_time
+        [key_press, key_seconds, key_code, ~] = KbCheck;
+        pause(.01);
+        if key_press == 1
+            key_hit = KbName(key_code);
+            if isequal(key_hit, 'q')
+                % quit command sent
+                quit_command = 1;
+                break
+            end
+            if response_made == 0
+                temp_key = key_hit;
+                temp_sec = key_seconds;
+                response_made = 1;
+            end
+        end
+    end
+    
+    if quit_command == 1
+        break
+    end
+    
+    Screen('Flip', win);
+    
+    % pause between images:
+    [temp_sec2, temp_key2] = wait_kbcheck(iti_time);
+    
+    if ~isnan(temp_key)
+        key_strokes(1, i_time) = temp_key(1);
+        key_strokes(2, i_time) = temp_sec - str;
+    elseif ~isnan(temp_key2)
+        key_strokes(1, i_time) = temp_key2(1);
+        key_strokes(2, i_time) = temp_sec2 - str;
+    end
+
+    save([sub_name, '_temp'], 'image_sequence', 'stimulus_list', 'key_strokes', 'target_list');
+    
+end
+
+save([sub_name, '_encode'], 'image_sequence', 'stimulus_list', 'key_strokes', 'target_list');
 
 %% run pair-detection phase of experiment: 
 % for each item pair, show the first item in the pair along with the paired
