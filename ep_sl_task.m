@@ -30,8 +30,8 @@ screenNumber=min(screens);
 o = Screen('TextSize', win, 24);
 
 %% setup images:
-im_dwell_time = .8;
-iti_time = 3.2;
+im_dwell_time = 4;
+iti_time = 2;
 
 symbol_file_names = {...
     'afasa1.jpg', 'afasa2.jpg', 'afasa3.jpg', 'afasa4.jpg'...
@@ -40,14 +40,39 @@ symbol_file_names = {...
     '1.jpg', '2.jpg', '3.jpg', '4.jpg'...
     '5.jpg', '6.jpg', '7.jpg', '8.jpg'...
     '9.jpg', '10.jpg', '11.jpg', '12.jpg'};
-sym_texture_list = cell(1,length(symbol_file_names));
-for i_symb = 1:length(symbol_file_names)
-    temp_im = imread(symbol_file_names{i_symb});
+
+%load the noun_list:
+concrete_nouns;
+noun_list_rand = noun_list(randperm(length(noun_list)));
+
+face_dir = 'C:\Users\ITS\Documents\MATLAB\ieeg_ep_sl_memory\stims_famous\faces';
+place_dir = 'C:\Users\ITS\Documents\MATLAB\ieeg_ep_sl_memory\stims_famous\scenes';
+face_dir_contents = dir(face_dir);
+place_dir_contents = dir(place_dir);
+face_file_names = cell(1, length(face_dir_contents) - 2);
+place_file_names = cell(1, length(place_dir_contents) - 2);
+
+for i_face = 3:length(face_dir_contents)
+    face_file_names{i_face - 2} = face_dir_contents(i_face).name;
+end
+
+for i_place = 3:length(place_dir_contents)
+    place_file_names{i_place - 2} = place_dir_contents(i_place).name;
+end
+
+face_file_names_rand = face_file_names(randperm(length(face_file_names)));
+
+stimuli_file_names_ = cat(2, face_file_names_rand(1:31), place_file_names(1:31));
+stimuli_file_names = stimuli_file_names_(randperm(length(stimuli_file_names_)));
+
+sym_texture_list = cell(1,length(stimuli_file_names));
+for i_symb = 1:length(stimuli_file_names)
+    temp_im = imread(stimuli_file_names{i_symb});
     sym_texture_list{i_symb} = Screen('MakeTexture', win, temp_im);
 end
 
-N_TARG = 8;
-N_REPS = 5;
+N_TARG = 12;
+N_REPS = 1;
 sym_index = 1:length(sym_texture_list);
 sym_trigger = 1:length(sym_texture_list);
 target_index_temp = sym_index(randperm(length(sym_index)));
@@ -68,7 +93,7 @@ pause(.5);
 
 %% Display instructions.
 Screen('DrawText', win,...
-    'Please pay close attention to all images. Press the 0 key when you see "0"',...
+    'Please memorize the word given along with each image. Press the 0 key when you see "0"',...
     round(screen_dim1/2)-500, round(screen_dim2/2) - 100);
 Screen('DrawText', win,...
     'To begin, press the G key.',...
@@ -99,8 +124,13 @@ for i_time = 1:length(image_sequence)
         round(screen_dim1/2), round(screen_dim2/2));
         trigger_value = this_ind;
     else
-        Screen('DrawTexture', win, sym_texture_list{this_ind});
+        Screen('DrawTexture', win, sym_texture_list{this_ind},...
+            [],...
+            [round(screen_dim1/2) - 50, round(screen_dim2/2) + 50, round(screen_dim1/2) - 50, round(screen_dim2/2) + 50]);
         trigger_value = this_ind;
+        
+        Screen('DrawText', win, noun_list_rand{this_ind}, ...
+            round(screen_dim1/2), round(screen_dim2/2)-75);
     end
     stimulus_list(i_time) = trigger_value;
 

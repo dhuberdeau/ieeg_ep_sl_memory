@@ -19,6 +19,11 @@ screen_dims = [1920, 1080];
 screen_dim1 = screen_dims(1);
 screen_dim2 = screen_dims(2);
 
+% load target_index, target_pairs, and image_sequence
+% load('XX_SL_params.mat');
+generate_parameters_sl(sub_name);
+load([sub_name, '_SL_params.mat'])
+
 %% Intialise digital IO
 interSample = .01;
 if DAQ_ATTACHED
@@ -43,9 +48,6 @@ symbol_file_names = {...
 % 
 
 sym_index = 1:length(symbol_file_names);
-
-% load target_index, target_pairs, and image_sequence
-load('DR_SL_params.mat');
 
 quit_command = 0;
 
@@ -84,9 +86,6 @@ str = GetSecs; [sec,~,~]=KbWait(0,0);
 %% run encoding phase of experiment:
 stimulus_list = nan(1, length(image_sequence));
 key_strokes = nan(2, length(image_sequence));
-
-% insert catch trials (zeros, where subject has to hit 0)
-
 
 for i_time = 1:length(image_sequence)
     
@@ -158,6 +157,85 @@ end
 
 save([sub_name, '_encode'], 'image_sequence', 'stimulus_list', 'key_strokes', 'target_list');
 
+%% run item test phase:
+
+item_sym_index_rand = sym_index(randperm(length(sym_index)));
+item_response_YN = cell(1, length(item_sym_index_rand));
+item_response_conf = cell(1, length(item_sym_index_rand));
+for i_im = 1:length(sym_index)
+    % ITI
+    pause(1)
+    
+    % show image:
+    Screen('DrawTexture', win, sym_texture_list{item_sym_index_rand(i_im)});
+    Screen('DrawText', win,...
+        'Have you seen this symbol?',...
+        round(screen_dim1/2)-75, round(screen_dim2/2)-100);
+    
+    if DAQ_ATTACHED
+        send_trigger_to_initiated_lj(jo, jh, item_sym_index_rand(i_im));
+    end
+    Screen('Flip', win);
+    if DAQ_ATTACHED 
+        send_trigger_to_initiated_lj(jo, jh, 0);
+    end
+    
+    str = GetSecs;
+    key_press = 0;
+    while ~key_press
+        [key_press, key_seconds, key_code, ~] = KbCheck;
+        pause(.01);
+        if key_press == 1
+            key_hit = KbName(key_code);
+            item_response_YN{i_im} = key_hit;
+            if isequal(key_hit, 'q')
+                % quit command sent
+                quit_command = 1;
+                break
+            end
+        end
+    end
+    Screen('Flip', win);
+    
+    pause(.2)
+    
+    % ask for response:
+%     Screen('DrawTexture', win, sym_texture_list{sym_index_rand(i_im)});
+    Screen('DrawText', win,...
+        'How confident are you?',...
+        round(screen_dim1/2)-75, round(screen_dim2/2)- 100);
+     Screen('DrawText', win,...
+         '1 - did not see, 2 - may not have seen, 3 - may have seen, 4 - did see',...
+         round(screen_dim1/2)-175, round(screen_dim2/2));
+    
+    if DAQ_ATTACHED
+        send_trigger_to_initiated_lj(jo, jh, item_sym_index_rand(i_im));
+    end
+    Screen('Flip', win);
+    if DAQ_ATTACHED 
+        send_trigger_to_initiated_lj(jo, jh, 0);
+    end
+    
+    str = GetSecs;
+    key_press = 0;
+    while ~key_press
+        [key_press, key_seconds, key_code, ~] = KbCheck;
+        pause(.01);
+        if key_press == 1
+            key_hit = KbName(key_code);
+            item_response_conf{i_im} = key_hit;
+            if isequal(key_hit, 'q')
+                % quit command sent
+                quit_command = 1;
+                break
+            end
+        end
+    end
+    Screen('Flip', win);
+    save([sub_name, 'response_temp'], 'image_sequence', 'stimulus_list', 'key_strokes', 'item_response_YN', 'item_response_conf', 'item_sym_index_rand');
+%     pause
+end
+
 %% run pair-detection phase of experiment: 
 % for each item pair, show the first item in the pair along with the paired
 % item plus 1 random item (among those used in other pairs).
@@ -167,7 +245,7 @@ if DAQ_ATTACHED
     send_trigger_to_initiated_lj(jo, jh, 0);
 end
 
-N_TEST_REPS = 4;
+N_TEST_REPS = 1;
 N_ALTS = 2;
 
 option_locs_x = linspace(682, 1920 - 682, N_ALTS);
@@ -295,6 +373,7 @@ if DAQ_ATTACHED
     send_trigger_to_initiated_lj(jo, jh, 0);
 end
 
-save([sub_name, 'sl_final'], 'image_sequence', 'stimulus_list', 'key_strokes', 'response_YN', 'response_conf', 'target_list', 'target_pairs', 'symbol_index_options', 'response_answer', 'target_presentation_order');
+save([sub_name, 'sl_final'], 'image_sequence', 'stimulus_list', 'key_strokes', 'response_YN', 'response_conf', 'target_list', 'target_pairs', 'symbol_index_options', 'response_answer', 'target_presentation_order',...
+    'item_response_YN', 'item_response_conf', 'item_sym_index_rand');
 
 sca
